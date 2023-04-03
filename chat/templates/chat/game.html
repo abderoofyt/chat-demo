@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h1>Tic Tac Toe</h1>
+  <h2>Player One: {{ game.player_one }}</h2>
+  <h2>Player Two: {{ game.player_two }}</h2>
+  <div id="board"></div>
+  <script>
+    console.log("hello world")
+    var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+    var gameSocket = new WebSocket(
+        ws_scheme
+        + '://'
+        + window.location.host
+        + '/ws/tictactoe/'
+        + {{ game.id }}
+        + '/'
+    );
+
+    gameSocket.onmessage = function(e) {
+      var data = JSON.parse(e.data);
+      if (data.action === 'update') {
+        update_board(data.data.board, data.data.current_player);
+      }
+    };
+
+    function update_board(board, current_player) {
+      var board_div = document.getElementById('board');
+      board_div.innerHTML = '';
+
+      for (var i = 0; i < board.length; i++) {
+        var button = document.createElement('button');
+        button.setAttribute('data-index', i);
+        button.addEventListener('click', make_move);
+        button.innerHTML = board[i];
+        board_div.appendChild(button);
+      }
+
+      var current_player_div = document.createElement('div');
+      current_player_div.innerHTML = 'Current player: ' + current_player;
+      board_div.appendChild(current_player_div);
+    }
+
+    function make_move(event) {
+      var index = event.target.getAttribute('data-index');
+      var buttons = document.querySelectorAll('button');
+      var board = '';
+
+      for (var i = 0; i < buttons.length; i++) {
+        if (i == index) {
+          board += gameSocket.current_player;
+        } else {
+          board += buttons[i].innerHTML;
+        }
+      }
+
+      gameSocket.send(JSON.stringify({
+        'action': 'move',
+        'data': {
+          'board': board,
+          'current_player': gameSocket.current_player == 'X' ? 'O' : 'X',
+        }
+      }));
+    }
+  </script>
+{% endblock %}
